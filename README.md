@@ -16,3 +16,5 @@
 
 ## ファイル
 - `index.html` … アプリ本体（1ファイル完結）
+- `icons/` … アプリアイコン（`icon.svg` が元データ）
+- `manifest.webmanifest` … ホーム画面に追加したときの名前・アイコン設定
