@@ -122,6 +122,32 @@ button:disabled{opacity:.45;cursor:default}
 .cmp li .v{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
 .filebtn{display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:700;cursor:pointer}
 .filebtn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.ob{position:fixed;inset:0;z-index:30;overflow:auto;background-color:var(--bg);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.ob .in{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;gap:16px;padding:calc(20px + env(safe-area-inset-top,0px)) 0 calc(20px + env(safe-area-inset-bottom,0px))}
+.ob-top{display:flex;justify-content:space-between;align-items:center;min-height:44px}
+.ob-dots{display:flex;gap:6px}
+.ob-dots i{width:8px;height:8px;border-radius:4px;background:var(--line);transition:width .2s}
+.ob-dots i.on{width:22px;background:var(--accent)}
+.ob h2{font-size:23px;line-height:1.4;text-wrap:balance}
+.ob .lead{font-size:15px;color:var(--muted)}
+.ob .card{display:flex;flex-direction:column;gap:12px}
+.ob-hero{display:grid;place-items:center;padding:18px 0 4px}
+.ob-hero .stamp{width:112px;height:112px;font-size:44px;border-width:5px}
+.ob-pts{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.ob-pts li{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:baseline;font-size:14.5px}
+.ob-pts li b{font-size:13px;color:var(--accent);background:var(--accent-soft);border-radius:999px;text-align:center;padding:2px 0}
+.ob-tips li{grid-template-columns:28px 1fr}
+.ob-tips li b{background:none;font-size:18px}
+.ob .nav{margin-top:auto;display:flex;gap:8px;padding-top:8px}
+.ob .nav .save{flex:1;background:var(--accent);border-color:var(--accent);color:var(--on-accent);min-height:52px;font-size:16px}
+.ob .nav .ghost{min-height:52px}
+.big.hint{box-shadow:0 0 0 5px var(--accent-soft)}
+.hintmsg{font-size:13.5px;font-weight:700;color:var(--accent);text-align:center}
+@media (prefers-reduced-motion:no-preference){ .big.hint{animation:pulse 1.6s ease-in-out infinite} @keyframes pulse{50%{box-shadow:0 0 0 10px var(--accent-soft)}} }
+body.ob-open{overflow:hidden}
+.ob h2:focus{outline:none}
 body.has-mini{padding-bottom:calc(var(--tabh) + 84px + env(safe-area-inset-bottom,0px))}
 .stamp{width:64px;height:64px;border-radius:50%;border:3px solid var(--stamp);color:var(--stamp);display:grid;place-items:center;
   font-family:var(--f-display);font-size:24px;transform:rotate(-14deg);background:var(--stamp-soft)}
@@ -262,6 +288,7 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
 
 <div class="view" id="view"><div class="empty">記録を読み込んでいます。</div></div>
 <div id="sheetRoot"></div>
+<div id="obRoot"></div>
 <button class="swmini" id="swMini" hidden></button>
 <div class="toast" id="toast" role="status" hidden><span id="toastMsg"></span><button id="toastAct" hidden></button><button id="toastAct2" hidden></button></div>
 <nav class="tabs" aria-label="画面の切り替え"><div class="in">
@@ -511,7 +538,8 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
         <span class="eyebrow">今日の1つ</span>
         <h1>${esc(f.name)}</h1>
         <div class="minbox"><span class="tag">最低ライン・${esc(m.mins||5)}分</span><p>${esc(autoMin(f))}</p></div>
-        <button class="big ${done?"again":""}" data-log="${esc(f.id)}" data-lv="min" ${readOnly?"disabled":""}>${done?"もう1回やった":"やった"}</button>
+        ${obHint&&!done?`<p class="hintmsg">↓ 最低ラインをやったら、ここを押してハンコ</p>`:""}
+        <button class="big ${done?"again":""} ${obHint&&!done?"hint":""}" data-log="${esc(f.id)}" data-lv="min" ${readOnly?"disabled":""}>${done?"もう1回やった":"やった"}</button>
         ${swBox}
         ${more?`<details class="more"><summary>もっとやれる日は</summary>${more}</details>`:""}
       </section>
@@ -647,6 +675,7 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
       <section class="list">${live.map(liveRow).join("")||`<div class="empty">トラックがありません。</div>`}</section>
       ${past.length?`<details class="past"><summary>終了したトラック（${past.length}）</summary><div class="list">${past.map(row).join("")}</div></details>`:""}
       <p class="note">タップすると、そのトラックだけ編集できます。削除しても、これまでの記録は残ります。</p>
+      <button class="ghost" id="obAgain" style="align-self:center">？ 使い方をもう一度見る</button>
       ${paceCard}
       ${db&&db.local?`<section class="card stackcol" aria-label="バックアップ"><span class="eyebrow">バックアップ</span>
         <p class="note">記録はこのブラウザの中だけに保存されています。端末を替えるときや、ブラウザのデータを消す前に書き出してください。</p>
@@ -788,6 +817,106 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
     openSheet({mode:"new", data:{date:todayKey, t:t.id, lv, mins: mins || lvText(t,lv).mins || 5, amt:"", memo:""}});
   }
 
+  /* ---------- はじめてガイド ---------- */
+  let ob=null, obSeen=false, obHint=false;
+  const shouldOb = ()=> !!config && !config.onboarded && tracks().length===0 && !obSeen;
+  function openOb(){ obSeen=true; ob={step:0, name:"", until:"", mName:"", mTotal:"", mUnit:"ページ", mDone:"0"}; renderOb(); }
+  function closeOb(){ ob=null; $("#obRoot").innerHTML=""; document.body.classList.remove("ob-open"); }
+  function readOb(){
+    const v=id=>{ const e=$("#"+id); return e?e.value.trim():null; };
+    [["ob-name","name"],["ob-until","until"],["ob-mname","mName"],["ob-mtotal","mTotal"],["ob-munit","mUnit"],["ob-mdone","mDone"]].forEach(([id,k])=>{ const x=v(id); if(x!==null) ob[k]=x; });
+  }
+  function obPreview(){
+    const o=$("#ob-prev"); if(!o) return; readOb();
+    const total=parseInt(ob.mTotal,10), u=ob.mUnit||"ページ";
+    if(!(total>0)){ o.textContent=""; return; }
+    if(!ob.until){ o.textContent="試験日を入れていないので、1日の量はあとから「トラック」タブで決められます。"; return; }
+    const p=matPlan({id:"__ob", track:"__ob", total, done:parseInt(ob.mDone,10)||0, until:ob.until, unit:u});
+    o.textContent = p.state==="done" ? "もう全部終わっています。" : p.state==="over" ? "試験日が過ぎています。" : `→ 今日のノルマは ${p.quota}${u}（残り${p.remain}${u}を${p.daysLeft}日で）`;
+  }
+  function renderOb(){
+    if(!ob){ closeOb(); return; }
+    document.body.classList.add("ob-open");
+    const N=4, dots=[...Array(N)].map((_,i)=>`<i class="${i===ob.step?"on":""}"></i>`).join("");
+    const ex=["期末試験","資格試験","TOEIC","毎日の復習"].map(x=>`<button data-obex="${x}">${x}</button>`).join("");
+    let body="";
+    if(ob.step===0) body=`
+      <div class="ob-hero"><span class="stamp" aria-hidden="true">済</span></div>
+      <h2>毎日「最低ライン」だけやれば、今日はクリア。</h2>
+      <p class="lead">やる気がない日も、5分でできることだけやって閉じる。ハードルを下げて、勉強を途切れさせないための勉強帳です。</p>
+      <section class="card"><ul class="ob-pts">
+        <li><b>今日</b><span>今日やる1つと最低ライン。終わったら「やった」でハンコ。</span></li>
+        <li><b>記録</b><span>勉強時間のグラフ、ハンコ帳、先週の自分との比較。</span></li>
+        <li><b>トラック</b><span>科目・試験と参考書。試験日から1日の量を自動計算。</span></li>
+      </ul></section>
+      <div class="nav"><button class="save" data-ob="next">はじめる（1分）</button></div>`;
+    if(ob.step===1) body=`
+      <h2>何の勉強を続けたい？</h2>
+      <p class="lead">科目や試験を「トラック」として登録します。あとから増やせます。</p>
+      <section class="card">
+        <div class="chips" role="group" aria-label="例">${ex}</div>
+        <div class="fld"><label for="ob-name">名前</label><input id="ob-name" value="${esc(ob.name)}" placeholder="例：薬理学 期末、行政書士"></div>
+        <div class="fld"><label for="ob-until">試験日・締め切り（なければ空欄）</label><input id="ob-until" type="date" min="${todayKey}" value="${esc(ob.until)}"></div>
+        <span class="err" id="ob-err" role="alert"></span>
+      </section>
+      <div class="nav"><button class="ghost" data-ob="back">戻る</button><button class="save" data-ob="next">次へ</button></div>`;
+    if(ob.step===2) body=`
+      <h2>使う参考書・問題集は？</h2>
+      <p class="lead">入れておくと、試験日から逆算して「今日やる量」を毎日計算します。なければ飛ばしてOK。</p>
+      <section class="card">
+        <div class="fld"><label for="ob-mname">名前</label><input id="ob-mname" value="${esc(ob.mName)}" placeholder="例：過去問題集、教科書"></div>
+        <div class="two">
+          <div class="fld"><label for="ob-mtotal">全体の量</label><input id="ob-mtotal" type="number" inputmode="numeric" min="1" value="${esc(ob.mTotal)}" placeholder="例：300"></div>
+          <div class="fld"><label for="ob-munit">単位</label><input id="ob-munit" list="ob-units" value="${esc(ob.mUnit)}"><datalist id="ob-units">${UNITS.map(u=>`<option value="${u}">`).join("")}</datalist></div>
+        </div>
+        <div class="fld"><label for="ob-mdone">もう終わった量</label><input id="ob-mdone" type="number" inputmode="numeric" min="0" value="${esc(ob.mDone)}"></div>
+        <p class="prev" id="ob-prev" aria-live="polite"></p>
+        <span class="err" id="ob-err" role="alert"></span>
+      </section>
+      <div class="nav"><button class="ghost" data-ob="back">戻る</button><button class="ghost" data-ob="skip">あとで</button><button class="save" data-ob="next">次へ</button></div>`;
+    if(ob.step===3) body=`
+      <h2>準備できました</h2>
+      <section class="card"><ul class="ob-pts ob-tips">
+        <li><b>✅</b><span>最低ラインをやったら「やった」。ハンコが押されて今日はクリア。</span></li>
+        <li><b>⏱</b><span>「計って記録」で時間を計れます。途中で一時停止もできます。</span></li>
+        <li><b>🔥</b><span>2日続けて休まなければ、連続記録は途切れません。</span></li>
+        ${db&&db.local?`<li><b>💾</b><span>記録はこのブラウザに保存されます。ホーム画面に追加して、ときどき「トラック → バックアップ」で書き出してください。</span></li>`:""}
+      </ul></section>
+      <div class="nav"><button class="ghost" data-ob="back">戻る</button><button class="save" data-ob="done">今日の画面へ</button></div>`;
+    $("#obRoot").innerHTML=`<div class="ob" role="dialog" aria-modal="true" aria-label="はじめてガイド"><div class="in">
+      <div class="ob-top"><div class="ob-dots" aria-label="${ob.step+1} / ${N}">${dots}</div>${ob.step<3?`<button class="ghost" data-ob="close">スキップ</button>`:""}</div>
+      ${body}</div></div>`;
+    obPreview();
+    setTimeout(()=>{ const a=document.activeElement; if(a && a!==document.body && $("#obRoot").contains(a) && a.tagName==="INPUT") return; const f=$("#obRoot input")||$("#obRoot h2"); if(f&&f.focus){ if(f.tagName==="H2") f.setAttribute("tabindex","-1"); f.focus({preventScroll:true}); } },30);
+  }
+  function obAction(a){
+    readOb(); const err=$("#ob-err");
+    if(a==="close"){ closeOb(); if(config&&!config.onboarded){ const next=clone(config); next.onboarded=true; persist(next,"ガイドを閉じました。「トラック」タブからいつでも始められます"); } return; }
+    if(a==="back"){ ob.step=Math.max(0,ob.step-1); renderOb(); return; }
+    if(a==="skip"){ ob.mName=""; ob.mTotal=""; ob.step=3; renderOb(); return; }
+    if(a==="next"){
+      if(ob.step===1 && !ob.name){ err.textContent="名前を入れてください"; $("#ob-name").focus(); return; }
+      if(ob.step===2 && (ob.mName||ob.mTotal) && !(ob.mName && parseInt(ob.mTotal,10)>0)){ err.textContent="名前と全体の量を入れるか、「あとで」を押してください"; return; }
+      ob.step++; renderOb(); return;
+    }
+    if(a==="done"){
+      const next=clone(config); next.tracks=next.tracks||[]; next.onboarded=true;
+      if(ob.name){
+        const t={id:"t"+Date.now().toString(36), ci:next.tracks.length%6, name:ob.name, main:next.tracks.length===0,
+          levels:{min:{text:"",mins:5},normal:{text:"",mins:30},deep:{text:"",mins:60}}};
+        if(ob.until){ t.until=ob.until; next.countdowns=(next.countdowns||[]).concat([{label:ob.name,date:ob.until,track:t.id}]); }
+        if(t.main) next.tracks.unshift(t); else next.tracks.push(t);
+        const total=parseInt(ob.mTotal,10);
+        if(ob.mName && total>0){ const done=Math.min(total,Math.max(0,parseInt(ob.mDone,10)||0));
+          next.materials=(next.materials||[]).concat([{id:"m"+Date.now().toString(36), track:t.id, name:ob.mName, unit:ob.mUnit||"ページ", total, done, plan:{from:todayKey, done}}]); }
+        obHint=true;
+      }
+      const made=!!ob.name; closeOb(); tab="today"; try{ history.replaceState(null,"","#today"); }catch(e){}
+      persist(next, made?"準備できました。まずは最低ラインから":"準備できました");
+      window.scrollTo(0,0);
+    }
+  }
+
   /* ---------- render ---------- */
   function render(){
     renderMini();
@@ -796,6 +925,7 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
     if(!db){ v.innerHTML=`<div class="empty">このブラウザでは記録を保存できません。プライベートブラウズをやめるか、サイトデータの保存を許可してください。</div>`; return; }
     if(!configLoaded) return;
     if(!config){ v.innerHTML=`<div class="empty">まだ設定がありません。Claude に「ミニマム勉強帳に設定を入れて」と頼むと、トラックが入ります。</div>`; return; }
+    if(!ob && shouldOb()) openOb();
     v.innerHTML = tab==="today"?viewToday(): tab==="log"?viewLog(): viewTracks();
   }
   function softRender(){ if(tab==="tracks" && editing!==null) return; render(); }
@@ -817,6 +947,7 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
     toast("取り消しました");
   }
   function quickLog(id,lv,force){
+    obHint=false;
     if(!force && lastLog && lastLog.id===id && Date.now()-lastLog.time<30000){
       toast("さっき記録したばかりです",["もう1回記録",()=>quickLog(id,lv,true)]); return;
     }
@@ -896,9 +1027,11 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
     if(id==="sh-mat"){ readSheet(); const pr=sheet.data.prog; if(pr && !pr.n){ const m=matOf(pr.m); pr.n=(m&&matPlan(m).todayLeft)||0; } renderSheet(); const x=$("#sh-prog"); if(x&&!x.disabled) x.focus(); return; }
     if(id==="m-track"){ readMat(); renderSheet(); return; }
   });
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape" && sheet) closeSheet(); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape" && sheet) closeSheet();
+    if(e.key==="Enter" && ob && e.target.tagName==="INPUT"){ e.preventDefault(); obAction("next"); } });
   document.addEventListener("input",e=>{
     if(e.target.closest&&e.target.closest("#form")){ const er=$("#f-err"); if(er) er.textContent=""; }
+    if(e.target.closest&&e.target.closest(".ob")){ const er=$("#ob-err"); if(er) er.textContent=""; obPreview(); return; }
     if(e.target.closest&&e.target.closest(".sheet") && sheet && sheet.kind==="mat"){ const er=$("#m-err"); if(er) er.textContent=""; readMat(); matPreview(); return; }
     if(e.target.closest&&e.target.closest(".sheet")){ const er=$("#sh-err"); if(er) er.textContent="";
       if(e.target.id==="sh-mins") document.querySelectorAll("[data-qm]").forEach(b=>b.setAttribute("aria-pressed", String(+b.dataset.qm===+e.target.value))); }
@@ -921,6 +1054,9 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
     if(b.dataset.lvset){ readSheet(); const t=trackOf(sheet.data.t); sheet.data.lv=b.dataset.lvset; if(sheet.mode==="new" && !sheet.fromSw) sheet.data.mins=lvText(t,b.dataset.lvset).mins||sheet.data.mins; renderSheet(); return; }
     if(b.id==="sh-save"){ saveSheet(); return; }
     if(b.id==="m-save"){ saveMat(); return; }
+    if(b.dataset.ob){ obAction(b.dataset.ob); return; }
+    if(b.dataset.obex){ const n=$("#ob-name"); if(n){ n.value=b.dataset.obex; n.focus(); } return; }
+    if(b.id==="obAgain"){ openOb(); return; }
     if(b.id==="bkOut"){ exportData().catch(()=>toast("書き出せませんでした")); return; }
     if(b.id==="m-del"){ deleteMat(); return; }
     if(b.dataset.matnew!==undefined){ openMat(null, b.dataset.matnew); return; }
