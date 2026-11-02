@@ -887,7 +887,7 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
       <div class="ob-top"><div class="ob-dots" aria-label="${ob.step+1} / ${N}">${dots}</div>${ob.step<3?`<button class="ghost" data-ob="close">スキップ</button>`:""}</div>
       ${body}</div></div>`;
     obPreview();
-    setTimeout(()=>{ const f=$("#obRoot input")||$("#obRoot h2"); if(f&&f.focus){ if(f.tagName==="H2") f.setAttribute("tabindex","-1"); f.focus({preventScroll:true}); } },30);
+    setTimeout(()=>{ const a=document.activeElement; if(a && a!==document.body && $("#obRoot").contains(a) && a.tagName==="INPUT") return; const f=$("#obRoot input")||$("#obRoot h2"); if(f&&f.focus){ if(f.tagName==="H2") f.setAttribute("tabindex","-1"); f.focus({preventScroll:true}); } },30);
   }
   function obAction(a){
     readOb(); const err=$("#ob-err");
