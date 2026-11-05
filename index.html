@@ -101,6 +101,10 @@ button:disabled{opacity:.45;cursor:default}
 .hk-head span b{font-family:var(--f-display);font-weight:400;font-size:18px;color:var(--stamp);margin:0 2px}
 .hk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .hk .wd{font-size:11px;color:var(--muted);text-align:center;font-weight:700}
+.hk button.c{padding:0;min-height:0;border:none;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.hk button.c:hover{background:var(--accent-soft)}
+.linkbtn{border:none;background:none;min-height:36px;padding:2px 6px;color:var(--accent);font-size:13.5px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.detail .add{min-height:40px;font-size:14px;margin-top:4px}
 .hk .c{aspect-ratio:1;position:relative;display:grid;place-items:center;border-radius:8px;min-width:0}
 .hk .c i{position:absolute;top:2px;left:4px;font-style:normal;font-family:var(--f-mono);font-size:10px;color:var(--muted);line-height:1}
 .hk .c.today{outline:2px solid var(--accent);outline-offset:-2px}
@@ -545,6 +549,7 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
       </section>
       ${matsCardHTML()}
       <p class="msg">${msg}</p>
+      ${didStudy(keyOf(addDays(now,-1)))?"":`<p class="msg"><button class="linkbtn" data-sheet-day="${keyOf(addDays(now,-1))}" ${readOnly?"disabled":""}>昨日やったのに記録し忘れた？ → 昨日の分を記録</button></p>`}
       ${others?`<section class="list" aria-label="ほかのトラック"><span class="eyebrow">ほかのトラック（最低ラインだけでOK）</span>${others}</section>`:""}`;
   }
 
@@ -567,7 +572,7 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
     const xl=per.map(d=>{ const dd=parseKey(d.k), n=dd.getDate(); const show = period==="week" ? WD[dd.getDay()] : ((n===1||n%5===0)?n:""); return `<span class="${d.k===todayKey?"today":""}">${show}</span>`; }).join("");
     const sd=per.find(d=>d.k===selDay), sdd=parseKey(selDay);
     const detail=`<div class="detail"><div class="h"><span>${md(selDay)}（${WD[sdd.getDay()]}）</span><span>${hm(sd?sd.tot:0)}</span></div>
-      ${sd&&sd.tot?segOrder(sd.by).map(id=>`<div class="kv"><i class="dot c${ciOf(id)}"></i><span>${esc(nameOf(id))}</span><span class="v">${hm(sd.by[id])}</span></div>`).join(""):`<span class="note">この日の記録はありません。</span>`}</div>`;
+      ${sd&&sd.tot?segOrder(sd.by).map(id=>`<div class="kv"><i class="dot c${ciOf(id)}"></i><span>${esc(nameOf(id))}</span><span class="v">${hm(sd.by[id])}</span></div>`).join(""):`<span class="note">この日の記録はありません。</span>`}${selDay<=todayKey?`<button class="add" data-sheet-day="${selDay}" ${readOnly?"disabled":""}>＋ ${selDay===todayKey?"今日":md(selDay)+"（"+WD[sdd.getDay()]+"）"}に記録を追加</button>`:""}</div>`;
     const byTrack={}; per.forEach(d=>Object.entries(d.by).forEach(([id,m])=>{byTrack[id]=(byTrack[id]||0)+m;}));
     const brk=Object.entries(byTrack).sort((a,b)=>b[1]-a[1]).map(([id,m])=>`<div class="it"><div class="h"><i class="dot c${ciOf(id)}"></i><span>${esc(nameOf(id))}</span><span class="v">${hm(m)}<small>${Math.round(m/total*100)}%</small></span></div><div class="meter"><i class="c${ciOf(id)}" style="width:${(m/byTrack[Object.keys(byTrack).sort((a,b)=>byTrack[b]-byTrack[a])[0]]*100).toFixed(1)}%"></i></div></div>`).join("");
     const days=[...r.days].reverse().filter(k=>k<=todayKey && entries(k).length);
@@ -622,9 +627,11 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
     const cells=[...Array(lead)].map(()=>`<span></span>`);
     for(let i=1;i<=n;i++){ const k=keyOf(new Date(y,mo,i)), t=dayTotal(k), on=t>0&&k<=todayKey; if(on) cnt++;
       const lv=!on?0: t<30?1: t<60?2: t<120?3:4;
-      cells.push(`<span class="c ${lv?"l"+lv:""} ${k===todayKey?"today":""} ${k>todayKey?"fut":""}" ${on?`title="${md(k)} ${hm(t)}"`:""} aria-label="${md(k)}${on?" "+hm(t):""}"><i>${i}</i>${on?`<span class="st" aria-hidden="true">済</span>`:""}</span>`); }
+      const tag=k<=todayKey&&!readOnly?"button":"span";
+      cells.push(`<${tag} class="c ${lv?"l"+lv:""} ${k===todayKey?"today":""} ${k>todayKey?"fut":""}" ${tag==="button"?`data-sheet-day="${k}"`:""} ${on?`title="${md(k)} ${hm(t)}"`:""} aria-label="${md(k)}${on?" "+hm(t):""}${tag==="button"?"（タップで記録を追加）":""}"><i>${i}</i>${on?`<span class="st" aria-hidden="true">済</span>`:""}</${tag}>`); }
     return `<section class="card stackcol" aria-label="ハンコ帳"><div class="hk-head"><b>${mo+1}月のハンコ帳</b><span>押せた日<b>${cnt}</b>日</span></div>
       <div class="hk">${["月","火","水","木","金","土","日"].map(w=>`<span class="wd">${w}</span>`).join("")}${cells.join("")}</div>
+      <p class="note">日付をタップすると、その日の分を記録できます。</p>
       <div class="hk-lg">30分未満<span class="st l1"></span><span class="st l2"></span><span class="st l3"></span><span class="st l4"></span>2時間以上</div></section>`;
   }
   /* ---------- トラック ---------- */
@@ -789,6 +796,7 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
           <div class="fld"><label for="sh-date">日付</label><input id="sh-date" type="date" max="${todayKey}" value="${esc(d.date)}"></div>
           <div class="fld"><label for="sh-track">トラック</label><select id="sh-track">${opts}</select></div>
         </div>
+        <div class="chips" role="group" aria-label="日付をすばやく選ぶ">${[0,1,2].map(n=>{ const k=keyOf(addDays(now,-n)); return `<button data-dset="${k}" aria-pressed="${d.date===k}">${["今日","昨日","おととい"][n]}（${md(k)}）</button>`; }).join("")}</div>
         <div class="fld"><label for="sh-mins">時間</label>
           <div class="chips" role="group" aria-label="よく使う時間">${quick}</div>
           <div class="minrow"><input id="sh-mins" type="number" inputmode="numeric" min="1" max="720" value="${esc(d.mins)}"><span class="note">分</span></div></div>
@@ -811,10 +819,10 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
     if(!pm) d.prog=null;
     else { const n=parseInt((($("#sh-prog")||{}).value||""),10); d.prog = pm.value ? {m:pm.value, n:n>0?n:0} : null; }
   }
-  function newSheet(trackId, mins, lv){
+  function newSheet(trackId, mins, lv, date){
     const t=trackOf(trackId)||focusTrack()||tracks()[0]; if(!t){ toast("先にトラックを追加してください"); return; }
-    lv=lv||"min";
-    openSheet({mode:"new", data:{date:todayKey, t:t.id, lv, mins: mins || lvText(t,lv).mins || 5, amt:"", memo:""}});
+    lv=lv||"min"; date=(date&&date<=todayKey)?date:todayKey;
+    openSheet({mode:"new", data:{date, t:t.id, lv, mins: mins || lvText(t,lv).mins || 5, amt:"", memo:""}});
   }
 
   /* ---------- はじめてガイド ---------- */
@@ -975,7 +983,7 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
     applyProg([s.origProg?{m:s.origProg.m, d:-s.origProg.n}:null, e.prog?{m:e.prog.m, d:e.prog.n}:null]);
     if(d.date===todayKey){ popId=d.t; setTimeout(()=>{popId=null},600); lastLog={id:d.t,time:Date.now()}; }
     if(s.mode==="edit") toast("記録を直しました");
-    else { const pm=e.prog&&matOf(e.prog.m); toast((pm?pm.name+" +"+e.prog.n+unitOf(pm)+"・":"")+hm(d.mins)+"を記録しました",["取り消す",()=>undoEntry(d.date,e)]); }
+    else { const pm=e.prog&&matOf(e.prog.m); toast((d.date!==todayKey?md(d.date)+"に":"")+(pm?pm.name+" +"+e.prog.n+unitOf(pm)+"・":"")+hm(d.mins)+"を記録しました",["取り消す",()=>undoEntry(d.date,e)]); }
   }
   function deleteEntry(){
     if(!sheetArmed){ sheetArmed=true; readSheet(); renderSheet(); return; }
@@ -1034,6 +1042,7 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
     if(e.target.closest&&e.target.closest(".ob")){ const er=$("#ob-err"); if(er) er.textContent=""; obPreview(); return; }
     if(e.target.closest&&e.target.closest(".sheet") && sheet && sheet.kind==="mat"){ const er=$("#m-err"); if(er) er.textContent=""; readMat(); matPreview(); return; }
     if(e.target.closest&&e.target.closest(".sheet")){ const er=$("#sh-err"); if(er) er.textContent="";
+      if(e.target.id==="sh-date") document.querySelectorAll("[data-dset]").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.dset===e.target.value)));
       if(e.target.id==="sh-mins") document.querySelectorAll("[data-qm]").forEach(b=>b.setAttribute("aria-pressed", String(+b.dataset.qm===+e.target.value))); }
   });
   document.addEventListener("mouseover",e=>{ const c=e.target.closest&&e.target.closest(".col"); if(c && c.dataset.day!==selDay){ selDay=c.dataset.day; render(); } });
@@ -1046,6 +1055,8 @@ details.past summary{cursor:pointer;font-size:13.5px;color:var(--muted);font-wei
     if(b.dataset.tab){ go(b.dataset.tab); return; }
     if(b.dataset.log){ quickLog(b.dataset.log,b.dataset.lv); return; }
     if(b.dataset.sheetNew!==undefined){ newSheet(b.dataset.sheetNew); return; }
+    if(b.dataset.sheetDay){ newSheet(null,null,null,b.dataset.sheetDay); return; }
+    if(b.dataset.dset){ readSheet(); sheet.data.date=b.dataset.dset; renderSheet(); return; }
     if(b.dataset.entry){ const [k,i]=b.dataset.entry.split("|"); const ent=entries(k)[+i]; if(ent) openSheet({mode:"edit", date:k, idx:+i, data:{date:k, ...clone(ent), mins:minsOf(ent)}}); return; }
     if(b.dataset.period){ period=b.dataset.period; offset=0; selDay=null; render(); return; }
     if(b.dataset.off){ offset=Math.min(0,offset+(+b.dataset.off)); selDay=null; render(); return; }
